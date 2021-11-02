@@ -1,0 +1,20 @@
+query GetAnimes($page: Int!, $search: String, $sort: [MediaSort]) {
+    Page(page: $page, perPage: 15) {
+        media(search: $search, sort: $sort) {
+            id
+            title {
+                romaji
+                userPreferred
+            }
+            coverImage {
+                large
+                color
+            }
+            genres
+            averageScore
+        }
+        pageInfo {
+            hasNextPage
+        }
+    }
+}

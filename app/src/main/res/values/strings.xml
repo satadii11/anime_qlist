@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Anime QList</string>
+    <string name="search_placeholder">Cari anime favoritmu di sini...</string>
+    <string name="anime_not_found">Anime \"%s\" gak ketemu nih, coba cari anime lain yuk.</string>
+    <string name="sort_by">Diurutkan berdasarkan %s</string>
+    <string name="sort_with">Urutkan berdasarkan %s</string>
+    <string name="sort_score_dsc">skor tertinggi</string>
+    <string name="sort_score">skor terendah</string>
+    <string name="sort_start_dsc">terbaru</string>
+    <string name="sort_start">paling lama</string>
+    <string name="sort_unknown">random</string>
+    <string name="close">Tutup</string>
+</resources>
