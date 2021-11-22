@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
@@ -180,30 +181,26 @@ private fun SortDialogIfShown(
     onSortSelected: (MediaSort) -> Unit
 ) {
     if (shouldShowDialog) {
-        AlertDialog(
-            onDismissRequest = onDialogShown,
-            buttons = {},
-            text = {
-                Column {
-                    SortOption(R.string.sort_score_dsc) {
-                        onSortSelected(MediaSort.SCORE_DESC)
-                        onDialogShown()
-                    }
-                    SortOption(R.string.sort_score) {
-                        onSortSelected(MediaSort.SCORE)
-                        onDialogShown()
-                    }
-                    SortOption(R.string.sort_start_dsc) {
-                        onSortSelected(MediaSort.START_DATE_DESC)
-                        onDialogShown()
-                    }
-                    SortOption(R.string.sort_start) {
-                        onSortSelected(MediaSort.START_DATE)
-                        onDialogShown()
-                    }
+        Dialog(onDismissRequest = onDialogShown) {
+            Column(modifier = Modifier.background(Color.White, RoundedCornerShape(16.dp))) {
+                SortOption(R.string.sort_score_dsc) {
+                    onSortSelected(MediaSort.SCORE_DESC)
+                    onDialogShown()
+                }
+                SortOption(R.string.sort_score) {
+                    onSortSelected(MediaSort.SCORE)
+                    onDialogShown()
+                }
+                SortOption(R.string.sort_start_dsc) {
+                    onSortSelected(MediaSort.START_DATE_DESC)
+                    onDialogShown()
+                }
+                SortOption(R.string.sort_start) {
+                    onSortSelected(MediaSort.START_DATE)
+                    onDialogShown()
                 }
             }
-        )
+        }
     }
 }
 
