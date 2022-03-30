@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +25,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -39,6 +39,8 @@ import com.google.android.material.composethemeadapter.MdcTheme
 import com.skydoves.landscapist.coil.CoilImage
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.satadii11.animeqlist.R
+import io.github.satadii11.animeqlist.components.Loading
+import io.github.satadii11.animeqlist.components.TextInfo
 import io.github.satadii11.type.MediaSort
 import rememberAnimeListState
 
@@ -56,6 +58,7 @@ class AnimeListActivity : AppCompatActivity() {
                 val animeModels = viewModel.animes.collectAsLazyPagingItems()
                 val requestOption by viewModel.requestOption.collectAsState()
                 val shouldShowQuery by viewModel.shouldShowDialog.collectAsState()
+
                 AnimeList(
                     state,
                     animeModels,
@@ -90,25 +93,53 @@ private fun AnimeList(
     onDialogShown: () -> Unit,
     onSortSelected: (MediaSort) -> Unit
 ) {
+    val showErrorState by derivedStateOf { animeModels.loadState.refresh is LoadState.Error }
+    val showEmptyState by derivedStateOf {
+        val isNotLoading = animeModels.loadState.refresh is LoadState.NotLoading
+        val itemIsEmpty = animeModels.itemCount == 0
+        val queryIsChanged = !requestOption.query.isNullOrEmpty()
+        isNotLoading && itemIsEmpty && queryIsChanged
+    }
+
     Column {
         AnimeSearchBox(requestOption.query, onQueryChange)
         AnimeSortSwitch(requestOption.sortBy, showDialog)
 
-        EmptyStateIfNeeded(animeModels, requestOption.query)
-        ErrorStateIfNeeded(animeModels)
-        SortDialogIfShown(shouldShowDialog, onDialogShown, onSortSelected)
+        if (shouldShowDialog) {
+            SortDialog(onDialogShown, onSortSelected)
+        }
 
-        LazyColumn(state = state.lazyListState) {
-            if (animeModels.loadState.refresh is LoadState.Loading) {
-                item { Loading(Modifier.fillParentMaxSize()) }
+        when {
+            showEmptyState -> {
+                TextInfo(
+                    modifier = Modifier.fillMaxSize(),
+                    message = stringResource(
+                        id = R.string.anime_not_found,
+                        requestOption.query.orEmpty()
+                    )
+                )
             }
-
-            items(animeModels) {
-                it?.let { anime -> AnimeCard(animeModel = anime) }
+            showErrorState -> {
+                val errorState = animeModels.loadState.refresh as LoadState.Error
+                TextInfo(
+                    modifier = Modifier.fillMaxSize(),
+                    message = errorState.error.message.orEmpty()
+                )
             }
+            else -> {
+                LazyColumn(state = state.lazyListState) {
+                    if (animeModels.loadState.refresh is LoadState.Loading) {
+                        item { Loading(Modifier.fillParentMaxSize()) }
+                    }
 
-            if (animeModels.loadState.append == LoadState.Loading) {
-                item { Loading(Modifier.fillParentMaxWidth()) }
+                    items(animeModels) {
+                        it?.let { anime -> AnimeCard(animeModel = anime) }
+                    }
+
+                    if (animeModels.loadState.append == LoadState.Loading) {
+                        item { Loading(Modifier.fillParentMaxWidth()) }
+                    }
+                }
             }
         }
     }
@@ -151,60 +182,6 @@ private fun AnimeSortSwitch(sortBy: MediaSort, showDialog: () -> Unit) {
 }
 
 @Composable
-private fun EmptyStateIfNeeded(animeModels: LazyPagingItems<AnimeModel>, query: String?) {
-    val refreshState = animeModels.loadState.refresh
-
-    val isNotLoading = refreshState is LoadState.NotLoading
-    val itemIsEmpty = animeModels.itemCount == 0
-    val queryIsChanged = !query.isNullOrEmpty()
-    val shouldShowEmptyState = isNotLoading && itemIsEmpty && queryIsChanged
-    if (shouldShowEmptyState) {
-        TextInfo(
-            modifier = Modifier.fillMaxSize(),
-            message = stringResource(id = R.string.anime_not_found, query.orEmpty())
-        )
-    }
-}
-
-@Composable
-private fun ErrorStateIfNeeded(animeModels: LazyPagingItems<AnimeModel>) {
-    val refreshState = animeModels.loadState.refresh
-    if (refreshState is LoadState.Error) {
-        TextInfo(modifier = Modifier.fillMaxSize(), message = refreshState.error.message.orEmpty())
-    }
-}
-
-@Composable
-private fun SortDialogIfShown(
-    shouldShowDialog: Boolean,
-    onDialogShown: () -> Unit,
-    onSortSelected: (MediaSort) -> Unit
-) {
-    if (shouldShowDialog) {
-        Dialog(onDismissRequest = onDialogShown) {
-            Column(modifier = Modifier.background(Color.White, RoundedCornerShape(16.dp))) {
-                SortOption(R.string.sort_score_dsc) {
-                    onSortSelected(MediaSort.SCORE_DESC)
-                    onDialogShown()
-                }
-                SortOption(R.string.sort_score) {
-                    onSortSelected(MediaSort.SCORE)
-                    onDialogShown()
-                }
-                SortOption(R.string.sort_start_dsc) {
-                    onSortSelected(MediaSort.START_DATE_DESC)
-                    onDialogShown()
-                }
-                SortOption(R.string.sort_start) {
-                    onSortSelected(MediaSort.START_DATE)
-                    onDialogShown()
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun SortOption(optionId: Int, onClickListener: () -> Unit) {
     Box(
         modifier = Modifier
@@ -218,6 +195,33 @@ private fun SortOption(optionId: Int, onClickListener: () -> Unit) {
                 stringResource(optionId)
             )
         )
+    }
+}
+
+@Composable
+private fun SortDialog(
+    onDialogShown: () -> Unit,
+    onSortSelected: (MediaSort) -> Unit
+) {
+    Dialog(onDismissRequest = onDialogShown) {
+        Column(modifier = Modifier.background(Color.White, RoundedCornerShape(16.dp))) {
+            SortOption(R.string.sort_score_dsc) {
+                onSortSelected(MediaSort.SCORE_DESC)
+                onDialogShown()
+            }
+            SortOption(R.string.sort_score) {
+                onSortSelected(MediaSort.SCORE)
+                onDialogShown()
+            }
+            SortOption(R.string.sort_start_dsc) {
+                onSortSelected(MediaSort.START_DATE_DESC)
+                onDialogShown()
+            }
+            SortOption(R.string.sort_start) {
+                onSortSelected(MediaSort.START_DATE)
+                onDialogShown()
+            }
+        }
     }
 }
 
@@ -275,50 +279,6 @@ private fun AnimeCard(animeModel: AnimeModel) {
             }
         }
     }
-}
-
-@Composable
-private fun Loading(modifier: Modifier) {
-    Box(modifier) {
-        CircularProgressIndicator(
-            Modifier
-                .align(Alignment.Center)
-                .padding(top = 8.dp, bottom = 8.dp)
-        )
-    }
-}
-
-@Composable
-private fun TextInfo(modifier: Modifier, message: String) {
-    Box(modifier) {
-        Text(
-            text = message,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 16.dp),
-            fontSize = 18.sp,
-            color = MaterialTheme.colors.error
-        )
-    }
-}
-
-@Composable
-@Preview
-fun LoadingMatchParent() {
-    Loading(Modifier.fillMaxSize())
-}
-
-@Composable
-@Preview
-fun LoadingWrapContent() {
-    Loading(Modifier.fillMaxWidth())
-}
-
-@Composable
-@Preview
-fun TextInfoMatchParent() {
-    TextInfo(Modifier.fillMaxSize(), "Anime \"One Piece Naruto Bleach\" gak ketemu nih.")
 }
 
 @Preview

@@ -21,12 +21,10 @@ class AnimeListViewModel @Inject constructor(
     private val animeModelMapper: AnimeModelMapper
 ) : ViewModel() {
     private val _shouldShowDialog = MutableStateFlow(false)
-    val shouldShowDialog: StateFlow<Boolean>
-        get() = _shouldShowDialog
+    val shouldShowDialog = _shouldShowDialog.asStateFlow()
 
     private val _requestOption = MutableStateFlow(RequestOption())
-    val requestOption: StateFlow<RequestOption>
-        get() = _requestOption
+    val requestOption = _requestOption.asStateFlow()
 
     val animes = requestOption.flatMapLatest {
         animeRepository.getAnimes(it.query, it.sortBy)
